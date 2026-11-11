@@ -9,7 +9,7 @@ module instruction_reg_tb;
     logic [4:0] rd, rs1, rs2;
     logic [2:0] funct3;
 
-    instruction_register dut (.*);
+    instruction_reg dut (.*);
 
     always #5 clk = ~clk;
 

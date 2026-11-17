@@ -4,17 +4,17 @@ module cpu (
     output logic led, red, green, blue
 );
     logic [31:0] pc, alu_out, alu_result;
-    logic [31:0] instr, imm, imem_data;
-    logic [31:0] rs1_data, rs2_data, alu_b;
-    logic [6:0]  opcode, funct7;
+    logic [31:0] instr, imm_ext, imem_data_out;
+    logic [31:0] rd1, rd2, src_b;
+    logic [6:0]  op, funct7;
     logic [4:0]  rd, rs1, rs2;
     logic [2:0]  funct3;
 
     logic        ir_write, alu_out_write, reg_write, pc_write, alu_src_b;
-    logic [1:0]  fsm_alu_op;     
+    logic [1:0]  alu_op;     
     logic [2:0]  state_out;
     logic [1:0]  alu_src_a;
-    logic [31:0] alu_a;
+    logic [31:0] src_a;
 
     localparam logic [3:0] ALU_ADD = 4'b0000;
 
@@ -32,46 +32,46 @@ module cpu (
         .dmem_address(32'd0),
         .dmem_data_in(32'd0),
         .imem_address(pc),
-        .imem_data_out(imem_data),
+        .imem_data_out(imem_data_out),
         .dmem_data_out(),
         .reset(),                  
         .led(led), .red(red), .green(green), .blue(blue)
     );
 
-    instruction_register u_ir (
-        .clk, .reset, .ir_write, .instr_in(imem_data),
-        .instr, .opcode, .rd, .funct3, .rs1, .rs2, .funct7
+    instruction_reg u_ir (
+        .clk, .reset, .ir_write, .instr_in(imem_data_out),
+        .instr, .op, .rd, .funct3, .rs1, .rs2, .funct7
     );
 
-    imm_gen u_imm (.instr(instr), .imm(imm));          // placeholder port names until immediate generator is uploaded
+    immediate_generator u_imm (.instr(instr), .imm_ext(imm_ext));          // placeholder port names until immediate generator is uploaded
 
     register_file u_rf (
         .clk,
-        .rs1_addr(rs1), .rs2_addr(rs2),
-        .write_addr(rd), .write_data(alu_out), .write_enable(reg_write),
-        .rs1_data, .rs2_data
+        .a1(rs1), .a2(rs2),
+        .a3(rd), .wd3(alu_out), .we3(reg_write),
+        .rd1, .rd2
     );
 
-    assign alu_b = alu_src_b ? imm : rs2_data;
+    assign src_b = alu_src_b ? imm_ext : rd2;
     alu u_alu (
-        .a(rs1_data), .b(alu_b), .alu_op(ALU_ADD),
-        .result(alu_result), .eq(), .lt(), .ltu()
+        .src_a(rd1), .src_b(src_b), .alu_control(ALU_ADD),
+        .alu_result(alu_result), .eq(), .lt(), .ltu()
     );
 
     always_ff @(posedge clk)
         if (alu_out_write) alu_out <= alu_result;
 
-    control_fsm u_fsm (
-        .clk, .reset, .opcode, .funct3,
+    fsm u_fsm (
+        .clk, .reset, .op, .funct3,
         .ir_write, .alu_out_write, .reg_write, .pc_write,
-        .alu_src_b, .alu_op(fsm_alu_op), .state_out
+        .alu_src_b, .alu_op(alu_op), .state_out
     );
 
     always_comb begin
         case (alu_src_a)
-            2'd1:    alu_a = pc;
-            2'd2:    alu_a = 32'd0;
-            default: alu_a = rs1_data;
+            2'd1:    src_a = pc;
+            2'd2:    src_a = 32'd0;
+            default: src_a = rd1;
         endcase
     end
 

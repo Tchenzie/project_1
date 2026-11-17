@@ -4,7 +4,7 @@ module fsm (
     input  logic       reset,        // synchronous, active high
 
     // From instruction register
-    input  logic [6:0] opcode,
+    input  logic [6:0] op,
     input  logic [2:0] funct3,
 
     // Control outputs
@@ -36,11 +36,11 @@ module fsm (
 
     // Instruction decoding
     logic is_addi;
-    assign is_addi = (opcode == OP_IMM) && (funct3 == 3'b000);
+    assign is_addi = (op == OP_IMM) && (funct3 == 3'b000);
 
     logic is_lui, is_auipc, writes_rd_imm;
-    assign is_lui        = (opcode == OP_LUI);
-    assign is_auipc      = (opcode == OP_AUIPC);
+    assign is_lui        = (op == OP_LUI);
+    assign is_auipc      = (op == OP_AUIPC);
     assign writes_rd_imm = is_addi | is_lui | is_auipc;
 
     // State register

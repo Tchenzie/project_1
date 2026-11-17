@@ -5,7 +5,7 @@ module instruction_reg_tb;
     logic clk = 0;
     logic reset, ir_write;
     logic [31:0] instr_in, instr;
-    logic [6:0] opcode, funct7;
+    logic [6:0] op, funct7;
     logic [4:0] rd, rs1, rs2;
     logic [2:0] funct3;
 
@@ -43,7 +43,7 @@ module instruction_reg_tb;
 
 
         // tests if R-type instruction fields can be extracted
-        if (opcode != 7'b0110011 ||
+        if (op != 7'b0110011 ||
             rd != 3 ||
             rs1 != 1 ||
             rs2 != 2 ||

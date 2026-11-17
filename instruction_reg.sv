@@ -6,7 +6,7 @@ module instruction_reg (
     input  logic [31:0] instr_in,   // from instruction memory
 
     output logic [31:0] instr,      // full instruction
-    output logic [6:0]  opcode,     // identifies general instruction type      
+    output logic [6:0]  op,     // identifies general instruction type      
     output logic [4:0]  rd,         // destination register
     output logic [2:0]  funct3,     // identifies operation
     output logic [4:0]  rs1,        // 1st source register
@@ -25,7 +25,7 @@ module instruction_reg (
     end
 
     // Combinational assignments for each field
-    assign opcode = instr[6:0];
+    assign op = instr[6:0];
     assign rd     = instr[11:7];
     assign funct3 = instr[14:12];
     assign rs1    = instr[19:15];

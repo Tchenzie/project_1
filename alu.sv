@@ -1,5 +1,5 @@
 
-// alu_op uses the instruction's own bits: { funct7[5], funct3 }.
+// alu_control uses the instruction's own bits: { funct7[5], funct3 }.
 // For R-type, pass { instr[30], instr[14:12] } straight in.
 // For I-type ALU ops, use { 1'b0, funct3 }, except srai which needs { instr[30], funct3 }.
 // For loads, stores, jumps, auipc, lui, and address math, use ALU_ADD.
@@ -14,10 +14,10 @@
 
 // Ports: two 32-bit inputs, a 4-bit operation select, the 32-bit result, and three branch flags.
 module alu (
-    input  logic [31:0] a,
-    input  logic [31:0] b,
-    input  logic [3:0]  alu_op,
-    output logic [31:0] result,
+    input  logic [31:0] src_a, //rs1
+    input  logic [31:0] src_b, //rs2 or imm
+    input  logic [3:0]  alu_control, //operation select 
+    output logic [31:0] alu_result, //the computed thing
     output logic        eq,
     output logic        lt,
     output logic        ltu
@@ -38,60 +38,60 @@ module alu (
     // Shift amount signal, since a 32-bit value can only shift 0 to 31 places.
     logic [4:0] shamt;
 
-    // Use only the bottom 5 bits of b as the shift amount, as the RISC-V spec requires.
-    assign shamt = b[4:0];
+    // Use only the bottom 5 bits of src_b as the shift amount, as the RISC-V spec requires.
+    assign shamt = src_b[4:0];
 
     // Branch flags that are always computed: equal, signed less than, and unsigned less than.
-    assign eq = (a == b);
-    assign lt = ($signed(a) < $signed(b));
-    assign ltu = (a < b);
+    assign eq = (src_a == src_b);
+    assign lt = ($signed(src_a) < $signed(src_b));
+    assign ltu = (src_a < src_b);
 
-    // Combinational block that picks which operation's answer goes to result based on alu_op.
+    // Combinational block that picks which operation's answer goes to alu_result based on alu_control.
     always_comb begin
-        case (alu_op)
-            // Add a and b (also used for addresses, jumps, auipc, and lui).
+        case (alu_control)
+            // Add src_a and src_b (also used for addresses, jumps, auipc, and lui).
             ALU_ADD: begin
-                result = a + b;
+                alu_result = src_a + src_b;
             end
-            // Subtract b from a.
+            // Subtract src_b from src_a.
             ALU_SUB: begin
-                result = a - b;
+                alu_result = src_a - src_b;
             end
-            // Shift a left by shamt, filling the bottom with 0s.
+            // Shift src_a left by shamt, filling the bottom with 0s.
             ALU_SLL: begin
-                result = a << shamt;
+                alu_result = src_a << shamt;
             end
-            // Output 1 if a < b as signed numbers, otherwise 0.
+            // Output 1 if src_a < src_b as signed numbers, otherwise 0.
             ALU_SLT: begin
-                result = {31'b0, lt};
+                alu_result = {31'b0, lt};
             end
-            // Output 1 if a < b as unsigned numbers, otherwise 0.
+            // Output 1 if src_a < src_b as unsigned numbers, otherwise 0.
             ALU_SLTU: begin
-                result = {31'b0, ltu};
+                alu_result = {31'b0, ltu};
             end
-            // Bitwise XOR of a and b.
+            // Bitwise XOR of src_a and src_b.
             ALU_XOR: begin
-                result = a ^ b;
+                alu_result = src_a ^ src_b;
             end
             // Logical right shift, filling the top with 0s.
             ALU_SRL: begin
-                result = a >> shamt;
+                alu_result = src_a >> shamt;
             end
             // Arithmetic right shift, filling the top with copies of the sign bit so negatives stay negative.
             ALU_SRA: begin
-                result = $unsigned($signed(a) >>> shamt);
+                alu_result = $unsigned($signed(src_a) >>> shamt);
             end
-            // Bitwise OR of a and b.
+            // Bitwise OR of src_a and src_b.
             ALU_OR: begin
-                result = a | b;
+                alu_result = src_a | src_b;
             end
-            // Bitwise AND of a and b.
+            // Bitwise AND of src_a and src_b.
             ALU_AND: begin
-                result = a & b;
+                alu_result = src_a & src_b;
             end
             // Output 0 for unused codes so the tool doesn't create an accidental latch.
             default: begin
-                result = 32'b0;
+                alu_result = 32'b0;
             end
         endcase
     end

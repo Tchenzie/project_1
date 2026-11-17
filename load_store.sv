@@ -8,21 +8,21 @@
 //
 // Hookup:
 //   cpu.sv: memory .funct3(funct3), .dmem_wren(dmem_wren), .dmem_address(alu_out),
-//           .dmem_data_in(rs2_data), .dmem_data_out(dmem_data_out);
-//           register file .write_data(reg_write_data), .write_enable(reg_write | ls_reg_write);
+//           .dmem_data_in(rd2), .dmem_data_out(dmem_data_out);
+//           register file .wd3(result), .we3(reg_write | ls_reg_write);
 //           PC advances on (pc_write | mem_done).
 //   fsm.sv: loads/stores go S_DECODE -> S_EXECUTE -> a wait state that returns to S_FETCH when mem_done.
 module load_store (
     input  logic        clk,
     input  logic        reset,
     input  logic        start,          // connect to alu_out_write (high only in S_EXECUTE)
-    input  logic [6:0]  opcode,
+    input  logic [6:0]  op,
     input  logic [31:0] alu_out,        // rs1 + imm from S_EXECUTE
     input  logic [31:0] dmem_data_out,  // from memory.sv
     output logic        dmem_wren,      // to memory.sv
     output logic        ls_reg_write,   // write loaded data to rd
     output logic        mem_done,       // access finished: advance PC, return to fetch
-    output logic [31:0] reg_write_data  // to register file write_data
+    output logic [31:0] result  // to register file wd3
 );
 
     localparam logic [6:0] OP_LOAD  = 7'b0000011;
@@ -40,9 +40,9 @@ module load_store (
     always_ff @(posedge clk) begin
         if (reset)
             ls_state <= LS_IDLE;
-        else if (start && (opcode == OP_LOAD))
+        else if (start && (op == OP_LOAD))
             ls_state <= LS_READ;
-        else if (start && (opcode == OP_STORE))
+        else if (start && (op == OP_STORE))
             ls_state <= LS_WRITE;
         else if (ls_state == LS_READ)
             ls_state <= LS_WB;
@@ -53,6 +53,6 @@ module load_store (
     assign dmem_wren      = (ls_state == LS_WRITE);
     assign ls_reg_write   = (ls_state == LS_WB);
     assign mem_done       = (ls_state == LS_WB) || (ls_state == LS_WRITE);
-    assign reg_write_data = ls_reg_write ? dmem_data_out : alu_out;
+    assign result = ls_reg_write ? dmem_data_out : alu_out;
 
 endmodule

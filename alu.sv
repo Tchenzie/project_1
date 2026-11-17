@@ -14,10 +14,10 @@
 
 // Ports: two 32-bit inputs, a 4-bit operation select, the 32-bit result, and three branch flags.
 module alu (
-    input  logic [31:0] a,
-    input  logic [31:0] b,
-    input  logic [3:0]  alu_op,
-    output logic [31:0] result,
+    input  logic [31:0] a, //rs1
+    input  logic [31:0] b, //rs2 or imm
+    input  logic [3:0]  alu_op, //operation select 
+    output logic [31:0] result, //the computed thing
     output logic        eq,
     output logic        lt,
     output logic        ltu

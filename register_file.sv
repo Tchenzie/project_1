@@ -20,7 +20,7 @@ module register_file(
         registers[i]=32'b0; // power-on reset all zero
     end
     //
-    always @(posedge clk)
+    always_ff @(posedge clk)
         if (we3 && a3 != 5'd0) begin
         registers[a3] <= wd3;
         end

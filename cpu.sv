@@ -18,11 +18,23 @@ module cpu (
 
     localparam logic [3:0] ALU_ADD = 4'b0000;
 
-    // PC (resets to 0x1000)
-    always_ff @(posedge clk) begin
-        if (reset)         pc <= 32'h0000_1000;
-        else if (pc_write) pc <= pc + 32'd4;
-    end
+    // PC
+    logic [31:0] pc_next;
+    //branches and jumps
+    logic [31:0] link_addr;
+    logic branch_taken;
+
+    logic alu_eq;
+    logic alu_lt;
+    logic alu_ltu;
+
+    program_counter u_pc (
+        .clk(clk),
+        .reset(reset),
+        .pc_write(pc_write),
+        .pc_next(pc_next),
+        .pc(pc)
+    );
 
     // Memory 
     memory u_mem (
@@ -55,7 +67,7 @@ module cpu (
     assign src_b = alu_src_b ? imm_ext : rd2;
     alu u_alu (
         .src_a(rd1), .src_b(src_b), .alu_control(ALU_ADD),
-        .alu_result(alu_result), .eq(), .lt(), .ltu()
+        .alu_result(alu_result), .eq(alu_eq), .lt(alu_It), .ltu(alu_ltu)
     );
 
     always_ff @(posedge clk)
@@ -74,5 +86,23 @@ module cpu (
             default: src_a = rd1;
         endcase
     end
+
+    //Jump module
+    branch_jump_unit u_branch_jump (
+    .pc(pc),
+    .rs1(rd1),
+    .imm_ext(imm_ext),
+
+    .op(op),
+    .funct3(funct3),
+
+    .eq(alu_eq),
+    .lt(alu_lt),
+    .ltu(alu_ltu),
+
+    .pc_next(pc_next),
+    .link_addr(link_addr),
+    .branch_taken(branch_taken)
+    );
 
 endmodule

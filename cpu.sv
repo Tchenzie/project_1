@@ -20,6 +20,7 @@ module cpu (
     // PC
     logic [31:0] pc_next;
     //branches and jumps
+    logic [31:0] writeback_data;
     logic [31:0] link_addr;
     logic branch_taken;
     logic branch_en, jump_en;
@@ -74,8 +75,8 @@ module cpu (
     register_file u_rf (
         .clk,
         .a1(rs1), .a2(rs2),
-        .a3(rd), .wd3(alu_out), .we3(reg_write),
-        .rd1, .rd2
+        .a3(rd), .wd3(writeback_data), .we3(reg_write),
+        .rd1(rd1), .rd2(rd2)
     );
 
     assign src_b = alu_src_b ? imm_ext : rd2;
@@ -102,6 +103,13 @@ module cpu (
         endcase
     end
 
+    always_comb begin
+        if (jump_en)
+            writeback_data = link_addr;
+        else
+            writeback_data = alu_out;
+    end
+    
     //Jump module
     branch_jump u_branch_jump (
     .pc(pc),

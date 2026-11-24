@@ -1,4 +1,13 @@
 `include "memory.sv"
+`include "alu.sv"
+`include "branch_jump.sv"
+`include "immediate_generator.sv"
+`include "instruction_reg.sv"
+`include "pc.sv"
+`include "register_file.sv"
+`include "load_store.sv"
+`include "fsm.sv"
+`include "cpu.sv"
 
 module top (
     input  logic clk,

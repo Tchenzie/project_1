@@ -1,8 +1,12 @@
-module cpu (
+module cpu #(
+    parameter IMEM_INIT = ""
+)(
     input  logic clk,
     input  logic reset,          
     output logic led, red, green, blue
 );
+    logic        dmem_wren, ls_reg_write, mem_done;
+    logic [31:0] dmem_data_out, ls_result;
     logic [31:0] pc, alu_out, alu_result;
     logic [31:0] instr, imm_ext, imem_data_out;
     logic [2:0]  imm_src;
@@ -32,21 +36,23 @@ module cpu (
     program_counter u_pc (
         .clk(clk),
         .reset(reset),
-        .pc_write(pc_write),
+        .pc_write(pc_write | mem_done),
         .pc_next(pc_next),
         .pc(pc)
     );
 
     // Memory 
-    memory u_mem (
+    memory #(
+        .IMEM_INIT_FILE_PREFIX(IMEM_INIT)
+    ) u_mem (
         .clk(clk),
-        .funct3(3'b010),
-        .dmem_wren(1'b0),
-        .dmem_address(32'd0),
-        .dmem_data_in(32'd0),
+        .funct3(funct3),
+        .dmem_wren(dmem_wren),
+        .dmem_address(alu_out),
+        .dmem_data_in(rd2),
         .imem_address(pc),
         .imem_data_out(imem_data_out),
-        .dmem_data_out(),
+        .dmem_data_out(dmem_data_out),
         .reset(),                  
         .led(led), .red(red), .green(green), .blue(blue)
     );
@@ -75,23 +81,23 @@ module cpu (
     register_file u_rf (
         .clk,
         .a1(rs1), .a2(rs2),
-        .a3(rd), .wd3(writeback_data), .we3(reg_write),
+        .a3(rd), .wd3(writeback_data), .we3(reg_write | ls_reg_write),
         .rd1(rd1), .rd2(rd2)
     );
 
     assign src_b = alu_src_b ? imm_ext : rd2;
     alu u_alu (
         .src_a(src_a), .src_b(src_b), .alu_control(alu_control),
-        .alu_result(alu_result), .eq(alu_eq), .lt(alu_It), .ltu(alu_ltu)
+        .alu_result(alu_result), .eq(alu_eq), .lt(alu_lt), .ltu(alu_ltu)
     );
 
     always_ff @(posedge clk)
         if (alu_out_write) alu_out <= alu_result;
 
     fsm u_fsm (
-        .clk, .reset, .op, .funct3, funct7_5(instr[30]),
+        .clk, .reset, .op, .funct3, .funct7_5(instr[30]),
         .ir_write(ir_write), .alu_out_write(alu_out_write), .reg_write(reg_write), .pc_write(pc_write),
-        .alu_src_b(alu_src_b), .alu_control(alu_control), alu_src_a(alu_src_a), 
+        .alu_src_b(alu_src_b), .alu_control(alu_control), .alu_src_a(alu_src_a), 
         .branch_en(branch_en), .jump_en(jump_en), .state_out(state_out)
     );
 
@@ -104,7 +110,7 @@ module cpu (
     end
 
     always_comb begin
-        if (jump_en)
+        if (jump_en ? link_addr : ls_result)
             writeback_data = link_addr;
         else
             writeback_data = alu_out;
@@ -112,20 +118,31 @@ module cpu (
     
     //Jump module
     branch_jump u_branch_jump (
-    .pc(pc),
-    .rs1(rd1),
-    .imm_ext(imm_ext),
-
-    .op(op),
-    .funct3(funct3),
-
-    .eq(alu_eq),
-    .lt(alu_lt),
-    .ltu(alu_ltu),
-
-    .pc_next(pc_next),
-    .link_addr(link_addr),
-    .branch_taken(branch_taken)
+        .pc(pc),
+        .rs1(rd1),
+        .imm_ext(imm_ext),
+    
+        .op(op),
+        .funct3(funct3),
+    
+        .eq(alu_eq),
+        .lt(alu_lt),
+        .ltu(alu_ltu),
+    
+        .pc_next(pc_next),
+        .link_addr(link_addr),
+        .branch_taken(branch_taken)
     );
 
+    // load store module
+    load_store u_ls (
+        .clk, .reset,
+        .start(alu_out_write), .op, .alu_out,
+        .dmem_data_out, .dmem_wren, .ls_reg_write,
+        .mem_done, .result(ls_result)
+    );
+
+    always_comb
+        writeback_data = jump_en ? link_addr : ls_result;
+    
 endmodule

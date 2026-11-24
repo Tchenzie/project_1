@@ -193,6 +193,7 @@ module fsm (
             S_JUMP: begin
                 jump_en  = 1'b1;
                 pc_write = 1'b1;
+                reg_write = 1'b1
             end
 
             default: ;

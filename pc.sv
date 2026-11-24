@@ -11,7 +11,7 @@ module program_counter(
 );
 always_ff @(posedge clk) begin //update instruction on the positive edge of the clock
     if (reset)
-        pc <=  32'b0;
+        pc <=  32'h0000_1000;
     else if (pc_write)
         pc <= pc_next;
 end

@@ -8,7 +8,7 @@ module branch_jump(
 
     //Comparng output from Eleanes Alu
     input logic eq,
-    input logic it,
+    input logic lt,
     input logic ltu,
 
     output logic [31:0] pc_next,
@@ -47,11 +47,11 @@ module branch_jump(
                 pc_next = pc + imm_ext;
         end
         //JAL jump
-        else if (op==OPJAL) begin
+        else if (op==OP_JAL) begin
             pc_next = pc + imm_ext;
         end
         //JALR
-        else if (op==OPJALR) begin
+        else if (op==OP_JALR) begin
             pc_next = (rs1 + imm_ext) & 32'hFFFFFFFE;
         end
     end

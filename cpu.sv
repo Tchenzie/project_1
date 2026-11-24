@@ -11,18 +11,17 @@ module cpu (
     logic [2:0]  funct3;
 
     logic        ir_write, alu_out_write, reg_write, pc_write, alu_src_b;
-    logic [1:0]  alu_op;     
+    logic [3:0]  alu_control;   
     logic [2:0]  state_out;
     logic [1:0]  alu_src_a;
     logic [31:0] src_a;
-
-    localparam logic [3:0] ALU_ADD = 4'b0000;
 
     // PC
     logic [31:0] pc_next;
     //branches and jumps
     logic [31:0] link_addr;
     logic branch_taken;
+    logic branch_en, jump_en;
 
     logic alu_eq;
     logic alu_lt;
@@ -66,7 +65,7 @@ module cpu (
 
     assign src_b = alu_src_b ? imm_ext : rd2;
     alu u_alu (
-        .src_a(rd1), .src_b(src_b), .alu_control(ALU_ADD),
+        .src_a(src_a), .src_b(src_b), .alu_control(alu_control),
         .alu_result(alu_result), .eq(alu_eq), .lt(alu_It), .ltu(alu_ltu)
     );
 
@@ -74,9 +73,10 @@ module cpu (
         if (alu_out_write) alu_out <= alu_result;
 
     fsm u_fsm (
-        .clk, .reset, .op, .funct3,
-        .ir_write, .alu_out_write, .reg_write, .pc_write,
-        .alu_src_b, .alu_op(alu_op), .state_out
+        .clk, .reset, .op, .funct3, funct7_5(instr[30]),
+        .ir_write(ir_write), .alu_out_write(alu_out_write), .reg_write(reg_write), .pc_write(pc_write),
+        .alu_src_b(alu_src_b), .alu_control(alu_control), alu_src_a(alu_src_a), 
+        .branch_en(branch_en), .jump_en(jump_en), .state_out(state_out)
     );
 
     always_comb begin
@@ -88,7 +88,7 @@ module cpu (
     end
 
     //Jump module
-    branch_jump_unit u_branch_jump (
+    branch_jump u_branch_jump (
     .pc(pc),
     .rs1(rd1),
     .imm_ext(imm_ext),

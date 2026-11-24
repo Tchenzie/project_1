@@ -5,6 +5,7 @@ module cpu (
 );
     logic [31:0] pc, alu_out, alu_result;
     logic [31:0] instr, imm_ext, imem_data_out;
+    logic [2:0]  imm_src;
     logic [31:0] rd1, rd2, src_b;
     logic [6:0]  op, funct7;
     logic [4:0]  rd, rs1, rs2;
@@ -54,7 +55,21 @@ module cpu (
         .instr, .op, .rd, .funct3, .rs1, .rs2, .funct7
     );
 
-    immediate_generator u_imm (.instr(instr), .imm_ext(imm_ext));          // placeholder port names until immediate generator is uploaded
+    immediate_generator u_imm (
+        .instr(instr), .imm_src(imm_src), .imm_ext(imm_ext)
+    );
+
+    // Combination decode
+    always_comb begin
+        case (op)
+            7'b0100011: imm_src = 3'b001; // STORE
+            7'b1100011: imm_src = 3'b010; // BRANCH
+            7'b0110111: imm_src = 3'b011; // LUI
+            7'b0010111: imm_src = 3'b011; // AUIPC
+            7'b1101111: imm_src = 3'b100; // JAL
+            default:    imm_src = 3'b000; // I-type
+        endcase
+    end
 
     register_file u_rf (
         .clk,

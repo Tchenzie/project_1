@@ -8,28 +8,28 @@ li s4, 500             # Delay (ms) stored in s4
 loop:
     # RED LD
     sw s1, 0(s0)        #red and -4 (0 is offset) = -4
-    lw t0, -12(zero)       # time start
+    lw t0, -8(zero)       # time start
 
 red_hold:
-    lw t1, -12(zero)      # time current 
+    lw t1, -8(zero)      # time current 
     sub t2, t1, t0         # subtract 
     bltu t2, s4, red_hold  #branch if less than(compare)
 
     # GREEN LED
     sw s2, 0(s0)
-    lw t0, -12(zero)
+    lw t0, -8(zero)
 
 green_hold:
-    lw t1, -12(zero)
+    lw t1, -8(zero)
     sub t2, t1, t0
     bltu t2, s4, green_hold
 
     # BLUE LED
     sw s3, 0(s0)
-    lw t0, -12(zero)
+    lw t0, -8(zero)
 
 blue_hold:
-    lw t1, -12(zero)
+    lw t1, -8(zero)
     sub t2, t1, t0
     bltu t2, s4, blue_hold
 

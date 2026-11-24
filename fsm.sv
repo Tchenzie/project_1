@@ -7,6 +7,8 @@ module fsm (
     input  logic [6:0] op,
     input  logic [2:0] funct3,
     input  logic       funct7_5,
+    
+    input logic mem_done,
 
     // Control outputs
     output logic       ir_write,        
@@ -39,6 +41,10 @@ module fsm (
     localparam logic [1:0] SRC_A_PC   = 2'b01;
     localparam logic [1:0] SRC_A_ZERO = 2'b10;
 
+    // load and store
+    localparam logic [6:0] OP_LOAD  = 7'b0000011;
+    localparam logic [6:0] OP_STORE = 7'b0100011;
+
     // FSM states
     typedef enum logic [2:0] {
         S_FETCH      = 3'd0,        // PC drives instruction memory address
@@ -47,7 +53,8 @@ module fsm (
         S_EXECUTE    = 3'd3,        // ALU computes
         S_WRITEBACK  = 3'd4,        // write rd, advance PC
         S_BRANCH     = 3'd5,
-        S_JUMP       = 3'd6
+        S_JUMP       = 3'd6,
+        S_MEM        = 3'd7
     } state_t;
 
     state_t state, next_state;
@@ -63,6 +70,7 @@ module fsm (
     logic is_jalr;
     logic is_jump;
     logic writes_rd_imm;
+    logic is_mem;
     
     assign is_addi = (op == OP_IMM) &&
         (funct3 == 3'b000);
@@ -75,6 +83,7 @@ module fsm (
     assign is_jalr = (op == OP_JALR);
     assign is_jump = is_jal | is_jalr;
     assign writes_rd_imm = is_alu_reg | is_alu_imm | is_lui | is_auipc;
+    assign is_mem = (op == OP_LOAD) | (op == OP_STORE);
 
     // State register
     always_ff @(posedge clk) begin
@@ -97,14 +106,14 @@ module fsm (
                     next_state = S_BRANCH;
                 else if (is_jump)
                     next_state = S_JUMP;
-                else if (writes_rd_imm)
+                else if (writes_rd_imm | is_mem)
                     next_state = S_EXECUTE;
                 else
                     next_state = S_FETCH;
             end
             
             S_EXECUTE:
-                next_state = S_WRITEBACK;
+                next_state = is_mem ? S_MEM : S_WRITEBACK;
             
             S_WRITEBACK:  
                 next_state = S_FETCH;
@@ -114,6 +123,9 @@ module fsm (
             
             S_JUMP:       
                 next_state = S_FETCH;
+
+            S_MEM:     
+                next_state = mem_done ? S_FETCH : S_MEM;
             
             default:      
                 next_state = S_FETCH;
@@ -176,8 +188,15 @@ module fsm (
                     alu_src_b   = 1'b1;
                     alu_control = 4'b0000;
                 end
-            end
 
+                // load_store output
+                else if (is_mem) begin
+                    alu_src_a   = SRC_A_RS1;
+                    alu_src_b   = 1'b1;       
+                    alu_control = 4'b0000;
+                end
+            end
+            
             S_WRITEBACK: begin
                 reg_write = 1'b1;
                 pc_write  = 1'b1;   
@@ -193,7 +212,7 @@ module fsm (
             S_JUMP: begin
                 jump_en  = 1'b1;
                 pc_write = 1'b1;
-                reg_write = 1'b1
+                reg_write = 1'b1;
             end
 
             default: ;
